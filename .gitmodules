@@ -1,0 +1,6 @@
+[submodule "extern/avrdude"]
+	path = extern/avrdude
+	url = https://github.com/kcuzner/avrdude
+[submodule "extern/WiringPi"]
+	path = extern/WiringPi
+	url = https://github.com/WiringPi/WiringPi.git

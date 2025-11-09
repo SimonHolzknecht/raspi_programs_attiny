@@ -1,0 +1,407 @@
+diff --git a/avrdude/configure.ac b/avrdude/configure.ac
+index 236e3df..f500184 100644
+--- a/avrdude/configure.ac
++++ b/avrdude/configure.ac
+@@ -22,8 +22,8 @@
+ 
+ # Process this file with autoconf to produce a configure script.
+ 
+-AC_PREREQ(2.60)
+-AC_INIT(avrdude, 6.1-svn-20130917, avrdude-dev@nongnu.org)
++AC_PREREQ([2.72])
++AC_INIT([avrdude],[6.1-svn-20130917],[avrdude-dev@nongnu.org])
+ 
+ AC_CANONICAL_BUILD
+ AC_CANONICAL_HOST
+@@ -195,7 +195,20 @@ fi
+ 
+ # Checks for typedefs, structures, and compiler characteristics.
+ AC_C_CONST
+-AC_HEADER_TIME
++m4_warn([obsolete],
++[Update your code to rely only on HAVE_SYS_TIME_H,
++then remove this warning and the obsolete code below it.
++All current systems provide time.h; it need not be checked for.
++Not all systems provide sys/time.h, but those that do, all allow
++you to include it and time.h simultaneously.])dnl
++AC_CHECK_HEADERS_ONCE([sys/time.h])
++# Obsolete code to be removed.
++if test $ac_cv_header_sys_time_h = yes; then
++  AC_DEFINE([TIME_WITH_SYS_TIME],[1],[Define to 1 if you can safely include both <sys/time.h>
++	     and <time.h>.  This macro is obsolete.])
++fi
++# End of obsolete code.
++
+ 
+ # Checks for library functions.
+ AC_CHECK_FUNCS([memset select strcasecmp strdup strerror strncasecmp strtol strtoul gettimeofday usleep])
+@@ -220,7 +233,7 @@ LIBS="${LIBS} ${LIBHID}"
+ 
+ AH_TEMPLATE([HAVE_LIBHID],
+             [Define if HID support is enabled via the Win32 DDK])
+-AC_TRY_RUN([#include <windows.h>
++AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <windows.h>
+ #include <setupapi.h>
+ $HIDINCLUDE
+ 
+@@ -232,7 +245,7 @@ main(void)
+ 
+     return 0;
+ }
+-], [have_libhid=yes], [have_libhid=no], [have_libhid=no])
++]])],[have_libhid=yes],[have_libhid=no],[have_libhid=no])
+ AC_MSG_RESULT([$have_libhid])
+ if test x$have_libhid = xyes; then
+    AC_DEFINE([HAVE_LIBHID])
+@@ -253,9 +266,7 @@ AC_CHECK_TYPES([ulong_t], [], [], [#include <sys/types.h>])
+ 
+ AC_ARG_ENABLE(
+ 	[versioned-doc],
+-	AC_HELP_STRING(
+-		[--enable-versioned-doc],
+-		[install docs in directory with version name (default)]),
++	AS_HELP_STRING([--enable-versioned-doc],[install docs in directory with version name (default)]),
+ 	[case "${enableval}" in
+ 		yes) versioned_doc=yes ;;
+ 		no)  versioned_doc=no ;;
+@@ -271,9 +282,7 @@ fi
+ 
+ AC_ARG_ENABLE(
+ 	[doc],
+-	AC_HELP_STRING(
+-		[--enable-doc],
+-		[Enable building documents]),
++	AS_HELP_STRING([--enable-doc],[Enable building documents]),
+ 	[case "${enableval}" in
+ 		yes) enabled_doc=yes ;;
+ 		no)  enabled_doc=no ;;
+@@ -283,9 +292,7 @@ AC_ARG_ENABLE(
+ 
+ AC_ARG_ENABLE(
+ 	[parport],
+-	AC_HELP_STRING(
+-		[--enable-parport],
+-		[Enable accessing parallel ports(default)]),
++	AS_HELP_STRING([--enable-parport],[Enable accessing parallel ports(default)]),
+ 	[case "${enableval}" in
+ 		yes) enabled_parport=yes ;;
+ 		no)  enabled_parport=no ;;
+@@ -295,9 +302,7 @@ AC_ARG_ENABLE(
+ 	
+ AC_ARG_ENABLE(
+ 	[linuxgpio],
+-	AC_HELP_STRING(
+-		[--enable-linuxgpio],
+-		[Enable the Linux sysfs GPIO interface programmer type]),
++	AS_HELP_STRING([--enable-linuxgpio],[Enable the Linux sysfs GPIO interface programmer type]),
+ 	[case "${enableval}" in
+ 		yes) enabled_linuxgpio=yes ;;
+ 		no)  enabled_linuxgpio=no ;;
+@@ -392,10 +397,10 @@ if test "$GCC" = yes; then
+ 	safe_CFLAGS=$CFLAGS
+ 	CFLAGS="$ENABLE_WARNINGS -Wno-pointer-sign"
+ 
+-	AC_TRY_COMPILE(, [ int main () { return 0 ; } ], [
++	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[ int main () { return 0 ; } ]])],[
+ 		no_pointer_sign=yes
+ 		AC_MSG_RESULT([yes]) 
+-		], [
++		],[
+ 		no_pointer_sign=no
+ 		AC_MSG_RESULT([no]) 
+ 		])
+@@ -417,10 +422,10 @@ case $target in
+ 			safe_CFLAGS="$CFLAGS"
+ 			CFLAGS="$ENABLE_WARNINGS -mno-cygwin"
+ 
+-			AC_TRY_COMPILE(, [ int main () { return 0 ; } ], [
++			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[ int main () { return 0 ; } ]])],[
+ 				no_cygwin=yes
+ 				AC_MSG_RESULT([yes])
+-				], [
++				],[
+ 				no_cygwin=no
+ 				AC_MSG_RESULT([no])
+ 				])
+@@ -441,10 +446,10 @@ case $target in
+ 
+ 		safe_LDFLAGS="$LDFLAGS"
+ 		LDFLAGS="${LDFLAGS} -static"
+-		AC_TRY_LINK(, [ int main () { return 0 ; } ], [
++		AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[ int main () { return 0 ; } ]])],[
+ 			can_link_static=yes
+ 			AC_MSG_RESULT([yes])
+-			], [
++			],[
+ 			can_link_static_cygwin=no
+ 			AC_MSG_RESULT([no])
+ 			])
+diff --git a/avrdude/linuxspi.c b/avrdude/linuxspi.c
+index c474d7a..410208f 100644
+--- a/avrdude/linuxspi.c
++++ b/avrdude/linuxspi.c
+@@ -1,7 +1,7 @@
+ /*
+  * avrdude - A Downloader/Uploader for AVR device programmers
+  * Support for using spidev userspace drivers to communicate directly over SPI
+- * 
++ *
+  * Copyright (C) 2013 Kevin Cuzner <kevin@kevincuzner.com>
+  *
+  * This program is free software; you can redistribute it and/or modify
+@@ -17,10 +17,10 @@
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- * 
++ *
+  * Support for inversion of reset pin, Tim Chilton 02/05/2014
+  */
+- 
++
+ #include "linuxspi.h"
+ 
+ #include "ac_cfg.h"
+@@ -33,11 +33,11 @@
+ 
+ /**
+  * Linux Kernel SPI Drivers
+- * 
++ *
+  * Copyright (C) 2006 SWAPP
+  *      Andrea Paterniani <a.paterniani@swapp-eng.it>
+  * Copyright (C) 2007 David Brownell (simplification, cleanup)
+- * 
++ *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+  * the Free Software Foundation; either version 2 of the License, or
+@@ -95,7 +95,7 @@ static void linuxspi_display(PROGRAMMER * pgm, const char * p);
+ //universal
+ static int linuxspi_initialize(PROGRAMMER* pgm, AVRPART* p);
+ // SPI specific functions
+-static int linuxspi_cmd(PROGRAMMER * pgm, unsigned char cmd[4], unsigned char res[4]);
++static int linuxspi_cmd(PROGRAMMER * pgm, const unsigned char cmd[4], unsigned char res[4]);
+ static int linuxspi_program_enable(PROGRAMMER * pgm, AVRPART * p);
+ static int linuxspi_chip_erase(PROGRAMMER * pgm, AVRPART * p);
+ 
+@@ -111,7 +111,7 @@ static int linuxspi_spi_duplex(PROGRAMMER* pgm, unsigned char* tx, unsigned char
+         fprintf(stderr, "\n%s: error: Unable to open SPI port %s", progname, pgm->port);
+         return -1; //error
+     }
+-    
++
+     struct spi_ioc_transfer tr = {
+         .tx_buf = (unsigned long)tx,
+         .rx_buf = (unsigned long)rx,
+@@ -121,23 +121,23 @@ static int linuxspi_spi_duplex(PROGRAMMER* pgm, unsigned char* tx, unsigned char
+         .speed_hz = pgm->baudrate == 0 ? 400000 : pgm->baudrate,
+         .bits_per_word = 8,
+     };
+-    
++
+     int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+     close(fd);
+-    
++
+     if (ret != len)
+     {
+         fprintf(stderr, "\n%s: error: Unable to send SPI message\n", progname);
+         return -1;
+     }
+-    
++
+     return ret;
+ }
+ 
+ /**
+  * @brief Performs an operation on a gpio. Writes to stderr if error.
+  * @param op Operation to perform
+- * @param gpio 
++ * @param gpio
+  * @return -1 if failed, 0 otherwise
+  */
+ static int linuxspi_gpio_op_wr(PROGRAMMER* pgm, LINUXSPI_GPIO_OP op, int gpio, char* val)
+@@ -163,9 +163,9 @@ static int linuxspi_gpio_op_wr(PROGRAMMER* pgm, LINUXSPI_GPIO_OP op, int gpio, c
+             fprintf(stderr, "%s: linuxspi_gpio_op_wr(): Unknown op %d", progname, op);
+             return -1;
+     }
+-    
++
+     FILE* f = fopen(fn, "w");
+-    
++
+     int fopen_retries = 0;
+     while (!f && (fopen_retries < 100))
+     {
+@@ -180,17 +180,17 @@ static int linuxspi_gpio_op_wr(PROGRAMMER* pgm, LINUXSPI_GPIO_OP op, int gpio, c
+         free(fn); //we no longer need the path
+         return -1;
+     }
+-    
++
+     if (fprintf(f, val) < 0)
+     {
+         fprintf(stderr, "%s: linuxspi_gpio_op_wr(): Unable to write file %s with %s", progname, fn, val);
+         free(fn); //we no longer need the path
+         return -1;
+     }
+-    
++
+     fclose(f);
+     free(fn); //we no longer need the path
+-    
++
+     return 0;
+ }
+ 
+@@ -210,15 +210,15 @@ static void linuxspi_teardown(PROGRAMMER* pgm)
+ }
+ 
+ static int linuxspi_open(PROGRAMMER* pgm, char* port)
+-{   
++{
+     char* buf;
+-    
++
+     if (port == 0 || strcmp(port, "unknown") == 0) //unknown port
+     {
+         fprintf(stderr, "%s: error: No port specified. Port should point to an SPI interface.\n", progname);
+         exit(1);
+     }
+-    
++
+     if (pgm->pinno[PIN_AVR_RESET] == 0)
+     {
+         fprintf(stderr, "%s: error: No pin assigned to AVR RESET.\n", progname);
+@@ -234,27 +234,27 @@ static int linuxspi_open(PROGRAMMER* pgm, char* port)
+         return -1;
+     }
+     free(buf);
+-    
++
+     //set reset to output active and write initial value at same time
+     //this prevents glitches https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+     if (linuxspi_gpio_op_wr(pgm, LINUXSPI_GPIO_DIRECTION, pgm->pinno[PIN_AVR_RESET], pgm->pinno[PIN_AVR_RESET]&PIN_INVERSE ? "high" : "low") < 0)
+     {
+         return -1;
+     }
+-    
++
+     //save the port to our data
+     strcpy(pgm->port, port);
+-    
++
+     return 0;
+ }
+ 
+ static void linuxspi_close(PROGRAMMER* pgm)
+ {
+     char* buf;
+-    
++
+     //set reset to input
+     linuxspi_gpio_op_wr(pgm, LINUXSPI_GPIO_DIRECTION, pgm->pinno[PIN_AVR_RESET], "in");
+-    
++
+     //unexport reset
+     buf = malloc(32);
+     sprintf(buf, "%d", pgm->pinno[PIN_AVR_RESET]);
+@@ -279,14 +279,14 @@ static void linuxspi_display(PROGRAMMER* pgm, const char* p)
+ static int linuxspi_initialize(PROGRAMMER* pgm, AVRPART* p)
+ {
+     int tries, rc;
+-    
++
+     if (p->flags & AVRPART_HAS_TPI)
+     {
+         //we do not support tpi..this is a dedicated SPI thing
+         fprintf(stderr, "%s: error: Programmer %s does not support TPI\n", progname, pgm->type);
+         return -1;
+     }
+-    
++
+     //enable programming on the part
+     tries = 0;
+     do
+@@ -297,17 +297,17 @@ static int linuxspi_initialize(PROGRAMMER* pgm, AVRPART* p)
+         tries++;
+     }
+     while(tries < 65);
+-    
++
+     if (rc)
+     {
+         fprintf(stderr, "%s: error: AVR device not responding\n", progname);
+         return -1;
+     }
+-    
++
+     return 0;
+ }
+ 
+-static int linuxspi_cmd(PROGRAMMER* pgm, unsigned char cmd[4], unsigned char res[4])
++static int linuxspi_cmd(PROGRAMMER* pgm, const unsigned char cmd[4], unsigned char res[4])
+ {
+     return linuxspi_spi_duplex(pgm, cmd, res, 4);
+ }
+@@ -316,20 +316,20 @@ static int linuxspi_program_enable(PROGRAMMER* pgm, AVRPART* p)
+ {
+     unsigned char cmd[4];
+     unsigned char res[4];
+-    
++
+     if (p->op[AVR_OP_PGM_ENABLE] == NULL)
+     {
+         fprintf(stderr, "%s: error: program enable instruction not defined for part \"%s\"\n", progname, p->desc);
+         return -1;
+     }
+-    
++
+     memset(cmd, 0, sizeof(cmd));
+     avr_set_bits(p->op[AVR_OP_PGM_ENABLE], cmd); //set the cmd
+     pgm->cmd(pgm, cmd, res);
+-    
++
+     if (res[2] != cmd[1])
+         return -2;
+-    
++
+     return 0;
+ }
+ 
+@@ -337,29 +337,29 @@ static int linuxspi_chip_erase(PROGRAMMER* pgm, AVRPART* p)
+ {
+     unsigned char cmd[4];
+     unsigned char res[4];
+-    
++
+     if (p->op[AVR_OP_CHIP_ERASE] == NULL)
+     {
+         fprintf(stderr, "%s: error: chip erase instruction not defined for part \"%s\"\n", progname, p->desc);
+         return -1;
+     }
+-    
++
+     memset(cmd, 0, sizeof(cmd));
+ 
+     avr_set_bits(p->op[AVR_OP_CHIP_ERASE], cmd);
+     pgm->cmd(pgm, cmd, res);
+     usleep(p->chip_erase_delay);
+     pgm->initialize(pgm, p);
+-    
++
+     return 0;
+ }
+ 
+ void linuxspi_initpgm(PROGRAMMER * pgm)
+ {
+     strcpy(pgm->type, "linuxspi");
+-    
++
+     pgm_fill_old_pins(pgm); // TODO to be removed if old pin data no longer needed
+-    
++
+     /*
+      * mandatory functions
+      */
